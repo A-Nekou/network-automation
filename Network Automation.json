@@ -1,0 +1,233 @@
+{
+  "name": "Pro Test",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        -100
+      ],
+      "id": "791525d3-a618-4dbc-8f83-190c64dbccb0",
+      "webhookId": "bc1143b8-4d2f-4166-b751-8c4f6befcccf",
+      "credentials": {
+        "telegramApi": {
+          "id": "BKybLP0TofpETczf",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "\nconst allowedUser = \"Ali_Nekoo98\";\nif ($json.message.from.username !== allowedUser) {\n  throw new Error(\"Unauthorized user\");\n}\nreturn [{ json: $json }];\n"
+      },
+      "name": "Check Whitelist",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        -100
+      ],
+      "id": "aa3c3f90-7472-4ba8-a206-dba922747e65"
+    },
+    {
+      "parameters": {
+        "functionCode": "\nconst text = $json.message.text.replace('/config ', '');\nconst parts = text.split(' ');\nconst result = {};\nfor (const part of parts) {\n  const [key, value] = part.split('=');\n  result[key] = value;\n}\nresult[\"chat_id\"] = $json.message.chat.id;\nreturn [{ json: result }];\n"
+      },
+      "name": "Parse Message",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        -100
+      ],
+      "id": "195bf508-f0b8-4715-89ef-998305c6295b"
+    },
+    {
+      "parameters": {
+        "command": "ping -c 1 {{$json[\"ip\"]}}"
+      },
+      "name": "Ping Device",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        -100
+      ],
+      "id": "4f0680e7-7cf1-4b11-ac8a-5899f5e70aa1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"model\"]}}",
+              "value2": "mikrotik"
+            }
+          ]
+        }
+      },
+      "name": "Select Config",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -100,
+        -100
+      ],
+      "id": "ec0deac4-1dae-429f-bcc7-1ba39c309025"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json[\"chat_id\"]}}",
+        "text": "\n✅ عملیات موفق بود\n\n📡 IP: {{$json[\"ip\"]}}  \n📦 مدل: {{$json[\"model\"]}}  \n🖥 Hostname جدید: {{$json[\"hostname\"]}}\n\n📅 {{ new Date().toLocaleString(\"fa-IR\") }}\n",
+        "additionalFields": {}
+      },
+      "name": "Send Telegram Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        340,
+        -100
+      ],
+      "id": "c56d1393-ff37-4436-af9e-eea9b589baac",
+      "webhookId": "a0698292-6c6e-446f-9640-f7e29598639b",
+      "credentials": {
+        "telegramApi": {
+          "id": "BKybLP0TofpETczf",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "ssh {{$json[\"user\"]}}@{{$json[\"ip\"]}} \"enable && configure terminal && hostname {{$json[\"hostname\"]}} && username admin password {{$json[\"newpass\"]}} && exit && exit\""
+      },
+      "name": "Send SSH Cisco Config",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        100,
+        60
+      ],
+      "id": "b88ea536-5145-4dab-904b-3d74c558ce01"
+    },
+    {
+      "parameters": {
+        "command": "ssh {{$json[\"user\"]}}@{{$json[\"ip\"]}} \"/system identity set name={{$json[\"hostname\"]}} && /user set admin password={{$json[\"newpass\"]}}\""
+      },
+      "name": "Send SSH Mikrotik Config",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        100,
+        -100
+      ],
+      "id": "b4e7e25f-8133-4da9-8a1a-04b96f669fb5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Whitelist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Whitelist": {
+      "main": [
+        [
+          {
+            "node": "Parse Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Message": {
+      "main": [
+        [
+          {
+            "node": "Ping Device",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ping Device": {
+      "main": [
+        [
+          {
+            "node": "Select Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Config": {
+      "main": [
+        [
+          {
+            "node": "Send SSH Mikrotik Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send SSH Cisco Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send SSH Cisco Config": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send SSH Mikrotik Config": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c1a16e37-0f24-4367-9268-e606682f39db",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "688935c6cfb4e92fec64c98813cb2fcd08b20a474ec4fa9207cbff1b95eb097d"
+  },
+  "id": "fXAHF9mqowtKzLmB",
+  "tags": []
+}
